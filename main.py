@@ -245,8 +245,6 @@ def main():
 
     # Tabela de dados detalhados
     st.markdown("---")
-    # Tabela de dados detalhados
-    st.markdown("---")
     st.header("Dados Detalhados")
 
     # Expander para dados detalhados
