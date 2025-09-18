@@ -141,6 +141,7 @@ def main():
     # Seção de KPIs principais
     st.header("📈 KPIs Principais")
 
+    # KPIs sempre visíveis (resumo)
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -167,32 +168,33 @@ def main():
             value=formatar_numero(kpis['leads_perdidos'])
         )
 
-    # Segunda linha de KPIs
-    col5, col6, col7, col8 = st.columns(4)
+    # Expander para KPIs adicionais
+    with st.expander("📋 Ver KPIs Detalhados Adicionais", expanded=False):
+        col5, col6, col7, col8 = st.columns(4)
 
-    with col5:
-        st.metric(
-            label="📝 Leads com Nome",
-            value=formatar_numero(kpis['leads_com_nome'])
-        )
+        with col5:
+            st.metric(
+                label="📝 Leads com Nome",
+                value=formatar_numero(kpis['leads_com_nome'])
+            )
 
-    with col6:
-        st.metric(
-            label="📞 Leads com Telefone",
-            value=formatar_numero(kpis['leads_com_telefone'])
-        )
+        with col6:
+            st.metric(
+                label="📞 Leads com Telefone",
+                value=formatar_numero(kpis['leads_com_telefone'])
+            )
 
-    with col7:
-        st.metric(
-            label="🏷️ Leads com Status",
-            value=formatar_numero(kpis['leads_com_status'])
-        )
+        with col7:
+            st.metric(
+                label="🏷️ Leads com Status",
+                value=formatar_numero(kpis['leads_com_status'])
+            )
 
-    with col8:
-        st.metric(
-            label="⏳ Em Progresso",
-            value=formatar_numero(kpis['funil_progresso'])
-        )
+        with col8:
+            st.metric(
+                label="⏳ Em Progresso",
+                value=formatar_numero(kpis['funil_progresso'])
+            )
 
     st.markdown("---")
 
@@ -237,7 +239,7 @@ def main():
         st.plotly_chart(fig_performance, use_container_width=True)
 
     # Gráfico de leads ao longo do tempo
-    st.subheader("�� Leads Criados ao Longo do Tempo")
+    st.subheader("📈 Leads Criados ao Longo do Tempo")
     fig_tempo = charts.criar_leads_tempo(df_tempo)
     st.plotly_chart(fig_tempo, use_container_width=True)
 
