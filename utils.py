@@ -11,7 +11,7 @@ def categorizar_status(status):
     status = str(status).upper().strip()
 
     # Status de leads fechados/convertidos
-    status_fechados = ["PAGO", "GRADUAÇÃO"]
+    status_fechados = ["PAGO"]
 
     # Status de leads em progresso
     status_progresso = [
@@ -26,7 +26,7 @@ def categorizar_status(status):
         "NÃO RESPONDE", "SEM ENSINO MÉDIO", "NÃO POSSUÍ INTERESSE",
         "NÃO CONTÉ O CURSO QUE DESEJA", "NÃO TEM O CURSO",
         "ME BLOQUEOU", "OUTRO TIPO DE CURSO", "NÃO CONTÉM EXPERIENCIA",
-        "NÃO POSSUI O CURSO QUE DESEJA"
+        "NÃO POSSUI O CURSO QUE DESEJA", "GRADUAÇÃO"
     ]
 
     if any(s in status for s in status_fechados):
