@@ -40,11 +40,11 @@ st.markdown("""
 
 
 @st.cache_data(ttl=300)
-def carregar_dados():
+def carregar_dados(aba_selecionada="Setembro"):
     """Carrega os dados com cache"""
     try:
         loader = GoogleSheetsLoader()
-        df = loader.carregar_todos_dados()
+        df = loader.carregar_todos_dados(aba_selecionada)
         if df.empty:
             st.warning(
                 "Não foi possível carregar dados do Google Sheets. Usando dados de demonstração.")
@@ -61,9 +61,22 @@ def main():
     st.title("📊 Dashboard de Vendas - Sheets")
     st.markdown("---")
 
-    # Carrega os dados
-    with st.spinner("Carregando dados..."):
-        df_raw = carregar_dados()
+    # Sidebar - Filtros
+    st.sidebar.header("🔍 Filtros")
+
+    # Filtro de Aba
+    loader = GoogleSheetsLoader()
+    abas_disponiveis = loader.obter_abas_disponiveis()
+
+    aba_selecionada = st.sidebar.selectbox(
+        "📋 Selecione a Aba:",
+        options=abas_disponiveis,
+        index=0  # Setembro como padrão
+    )
+
+    # Carrega os dados baseado na aba selecionada
+    with st.spinner(f"Carregando dados da aba '{aba_selecionada}'..."):
+        df_raw = carregar_dados(aba_selecionada)
 
     if df_raw.empty:
         st.error("Não foi possível carregar os dados.")
@@ -75,13 +88,10 @@ def main():
     processor = DataProcessor(df_raw)
     charts = DashboardCharts()
 
-    # Sidebar - Filtros
-    st.sidebar.header("🔍 Filtros")
-
     # Filtro de vendedor
     vendedores_disponiveis = sorted(df_raw['Vendedor'].unique())
     vendedores_selecionados = st.sidebar.multiselect(
-        "Selecione os Vendedores:",
+        "👥 Selecione os Vendedores:",
         options=vendedores_disponiveis,
         default=vendedores_disponiveis
     )
@@ -122,6 +132,7 @@ def main():
     # Informações sobre os dados carregados
     st.sidebar.markdown("---")
     st.sidebar.subheader("ℹ️ Informações")
+    st.sidebar.info(f"Aba: {aba_selecionada}")
     st.sidebar.info(f"Total de registros: {len(df_raw)}")
     st.sidebar.info(f"Vendedores: {len(vendedores_disponiveis)}")
 
@@ -239,13 +250,13 @@ def main():
         st.plotly_chart(fig_performance, use_container_width=True)
 
     # Gráfico de leads ao longo do tempo
-    st.subheader("📈 Leads Criados ao Longo do Tempo")
+    st.subheader("�� Leads Criados ao Longo do Tempo")
     fig_tempo = charts.criar_leads_tempo(df_tempo)
     st.plotly_chart(fig_tempo, use_container_width=True)
 
     # Tabela de dados detalhados
     st.markdown("---")
-    st.header("Dados Detalhados")
+    st.header("📋 Dados Detalhados")
 
     # Expander para dados detalhados
     with st.expander("🔍 Ver Tabela de Dados Detalhados", expanded=False):
@@ -254,7 +265,7 @@ def main():
 
         with col1:
             colunas_disponiveis = ['Data_Formatada', 'Vendedor',
-                                   'Aluno', 'Telefone', 'Status', 'Status_Categoria']
+                                   'Aluno', 'Telefone', 'Status', 'Status_Categoria', 'Aba']
             mostrar_colunas = st.multiselect(
                 "Selecione as colunas:",
                 options=colunas_disponiveis,
@@ -325,7 +336,7 @@ def main():
                 st.download_button(
                     label="Baixar CSV",
                     data=csv,
-                    file_name=f"dados_vendas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    file_name=f"dados_vendas_{aba_selecionada}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
                 )
             except Exception as e:

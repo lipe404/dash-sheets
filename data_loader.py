@@ -15,17 +15,49 @@ class GoogleSheetsLoader:
             "Felipe": "1hZLQ5-pQsKhRv4hSQZLS9k8KRSoYjzKAUmSnjKf9umg"
         }
 
-    def carregar_dados_vendedor(self, vendedor, sheet_id):
-        """Carrega dados de um vendedor específico do Google Sheets"""
+        # Abas disponíveis (você pode expandir esta lista conforme necessário)
+        self.abas_disponiveis = [
+            "Setembro", "Outubro", "Novembro", "Dezembro",
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio",
+            "Junho", "Julho", "Agosto"
+        ]
+
+    def obter_gid_aba(self, sheet_id, nome_aba):
+        """Tenta obter o GID da aba específica"""
+        # GIDs comuns para diferentes abas (você pode expandir conforme necessário)
+        gids_conhecidos = {
+            "Setembro": ["0", "553357363", "135700763", "1208338902"],
+            "Outubro": ["1", "553357364", "135700764", "1208338903"],
+            "Novembro": ["2", "553357365", "135700765", "1208338904"],
+            # Adicione mais conforme necessário
+        }
+
+        return gids_conhecidos.get(nome_aba, ["0"])
+
+    def carregar_dados_vendedor(self, vendedor, sheet_id, aba_selecionada="Setembro"):
+        """Carrega dados de um vendedor específico do Google Sheets de uma aba específica"""
         try:
+            # Obtém possíveis GIDs para a aba
+            gids_possiveis = self.obter_gid_aba(sheet_id, aba_selecionada)
+
             # Diferentes formatos de URL para tentar acessar a planilha
-            urls_tentativas = [
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0",
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Setembro",
-                f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&sheet=Setembro"
-            ]
+            urls_tentativas = []
+
+            # Tenta com diferentes GIDs
+            for gid in gids_possiveis:
+                urls_tentativas.extend([
+                    f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}",
+                    f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}",
+                ])
+
+            # Tenta com nome da aba
+            urls_tentativas.extend([
+                f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={aba_selecionada}",
+                f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&sheet={aba_selecionada}"
+            ])
 
             df = pd.DataFrame()
+            url_sucesso = None
 
             for url in urls_tentativas:
                 try:
@@ -33,18 +65,27 @@ class GoogleSheetsLoader:
                     response = requests.get(url, timeout=10)
                     if response.status_code == 200:
                         df = pd.read_csv(StringIO(response.text))
-                        break
-                    else:
+                        # Verifica se tem dados válidos
+                        if not df.empty and len(df.columns) >= 3:
+                            url_sucesso = url
+                            break
+                except:
+                    try:
                         # Tenta com pandas diretamente
                         df = pd.read_csv(url)
-                        break
-                except:
-                    continue
+                        if not df.empty and len(df.columns) >= 3:
+                            url_sucesso = url
+                            break
+                    except:
+                        continue
 
             if df.empty:
                 st.warning(
-                    f"Não foi possível acessar os dados de {vendedor}. Verifique se a planilha está pública.")
+                    f"Não foi possível acessar os dados de {vendedor} na aba '{aba_selecionada}'. Verifique se a planilha e aba estão públicas.")
                 return pd.DataFrame()
+
+            # Debug info (opcional - remova em produção)
+            # st.info(f"Dados carregados de {vendedor} - Aba: {aba_selecionada} - URL: {url_sucesso}")
 
             # Limpa o DataFrame
             df = df.dropna(how='all')  # Remove linhas completamente vazias
@@ -52,50 +93,57 @@ class GoogleSheetsLoader:
             df = df.dropna(axis=1, how='all')
 
             # Garante que temos pelo menos as colunas necessárias
-            if len(df.columns) < 4:
+            if len(df.columns) < 3:
                 st.warning(
-                    f"Planilha de {vendedor} não tem colunas suficientes.")
+                    f"Planilha de {vendedor} (aba {aba_selecionada}) não tem colunas suficientes.")
                 return pd.DataFrame()
 
             # Renomeia as colunas para padronizar (A, B, C, E = Data, Aluno, Telefone, Status)
-            colunas_mapeamento = {
-                0: 'Data',
-                1: 'Aluno',
-                2: 'Telefone',
-                # Coluna E ou D se não houver E
-                4: 'Status' if len(df.columns) > 4 else 3
-            }
+            colunas_mapeamento = {}
+
+            # Mapeia as colunas baseado na posição
+            if len(df.columns) >= 1:
+                colunas_mapeamento[0] = 'Data'
+            if len(df.columns) >= 2:
+                colunas_mapeamento[1] = 'Aluno'
+            if len(df.columns) >= 3:
+                colunas_mapeamento[2] = 'Telefone'
+
+            # Para a coluna Status, tenta a posição 4 (coluna E), senão usa a última disponível
+            if len(df.columns) >= 5:
+                colunas_mapeamento[4] = 'Status'
+            elif len(df.columns) >= 4:
+                colunas_mapeamento[3] = 'Status'
+            else:
+                # Se não tem coluna suficiente, cria uma coluna Status padrão
+                pass
 
             # Cria um novo DataFrame com as colunas corretas
             df_limpo = pd.DataFrame()
             for pos, nome_col in colunas_mapeamento.items():
                 if pos < len(df.columns):
                     df_limpo[nome_col] = df.iloc[:, pos]
-                else:
-                    df_limpo[nome_col] = None
 
-            # Se não temos coluna Status na posição correta, usa a última coluna disponível
-            if 'Status' not in df_limpo.columns or df_limpo['Status'].isna().all():
-                if len(df.columns) >= 4:
-                    df_limpo['Status'] = df.iloc[:, -1]  # Última coluna
-                else:
-                    df_limpo['Status'] = 'SEM STATUS'
+            # Se não conseguiu mapear a coluna Status, cria uma padrão
+            if 'Status' not in df_limpo.columns:
+                df_limpo['Status'] = 'SEM STATUS'
 
             # Remove linhas sem dados essenciais
             df_limpo = df_limpo.dropna(subset=['Data', 'Aluno'])
 
-            # Adiciona coluna do vendedor
+            # Adiciona coluna do vendedor e aba
             df_limpo['Vendedor'] = vendedor
+            df_limpo['Aba'] = aba_selecionada
 
             return df_limpo
 
         except Exception as e:
             st.warning(
-                f"Erro ao carregar dados do vendedor {vendedor}: {str(e)}")
+                f"Erro ao carregar dados do vendedor {vendedor} (aba {aba_selecionada}): {str(e)}")
             return pd.DataFrame()
 
-    def carregar_todos_dados(self):
-        """Carrega dados de todos os vendedores"""
+    def carregar_todos_dados(self, aba_selecionada="Setembro"):
+        """Carrega dados de todos os vendedores de uma aba específica"""
         dados_completos = []
 
         # Cria containers para progress
@@ -108,9 +156,11 @@ class GoogleSheetsLoader:
         vendedores_carregados = 0
 
         for i, (vendedor, sheet_id) in enumerate(self.vendedores_urls.items()):
-            status_text.text(f'Carregando dados de {vendedor}...')
+            status_text.text(
+                f'Carregando dados de {vendedor} (aba: {aba_selecionada})...')
 
-            df_vendedor = self.carregar_dados_vendedor(vendedor, sheet_id)
+            df_vendedor = self.carregar_dados_vendedor(
+                vendedor, sheet_id, aba_selecionada)
             if not df_vendedor.empty:
                 dados_completos.append(df_vendedor)
                 vendedores_carregados += 1
@@ -123,12 +173,17 @@ class GoogleSheetsLoader:
 
         if dados_completos:
             df_final = pd.concat(dados_completos, ignore_index=True)
-            # st.success(
-            # f"✅ Dados carregados com sucesso de {vendedores_carregados} vendedor(es)!")
+            """st.success(
+                f"✅ Dados carregados de {vendedores_carregados} vendedor(es) da aba '{aba_selecionada}'!")"""
             return df_final
         else:
-            st.error("❌ Não foi possível carregar dados de nenhuma planilha.")
+            st.error(
+                f"❌ Não foi possível carregar dados de nenhuma planilha da aba '{aba_selecionada}'.")
             return pd.DataFrame()
+
+    def obter_abas_disponiveis(self):
+        """Retorna lista de abas disponíveis"""
+        return self.abas_disponiveis
 
 
 def carregar_dados_demo():
@@ -163,7 +218,8 @@ def carregar_dados_demo():
             'Aluno': nome_aluno,
             'Telefone': telefone,
             'Status': random.choice(status_list),
-            'Vendedor': random.choice(vendedores)
+            'Vendedor': random.choice(vendedores),
+            'Aba': 'Setembro'  # Adiciona coluna Aba para dados demo
         })
 
     return pd.DataFrame(dados)
