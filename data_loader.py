@@ -123,8 +123,8 @@ class GoogleSheetsLoader:
 
         if dados_completos:
             df_final = pd.concat(dados_completos, ignore_index=True)
-            st.success(
-                f"✅ Dados carregados com sucesso de {vendedores_carregados} vendedor(es)!")
+            # st.success(
+            # f"✅ Dados carregados com sucesso de {vendedores_carregados} vendedor(es)!")
             return df_final
         else:
             st.error("❌ Não foi possível carregar dados de nenhuma planilha.")
