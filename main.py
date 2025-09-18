@@ -245,86 +245,93 @@ def main():
 
     # Tabela de dados detalhados
     st.markdown("---")
-    st.header("📋 Dados Detalhados")
+    # Tabela de dados detalhados
+    st.markdown("---")
+    st.header("Dados Detalhados")
 
-    # Opções de visualização da tabela
-    col1, col2, col3 = st.columns(3)
+    # Expander para dados detalhados
+    with st.expander("🔍 Ver Tabela de Dados Detalhados", expanded=False):
+        # Opções de visualização da tabela
+        col1, col2, col3 = st.columns(3)
 
-    with col1:
-        colunas_disponiveis = ['Data_Formatada', 'Vendedor',
-                               'Aluno', 'Telefone', 'Status', 'Status_Categoria']
-        mostrar_colunas = st.multiselect(
-            "Selecione as colunas:",
-            options=colunas_disponiveis,
-            default=['Data_Formatada', 'Vendedor', 'Aluno', 'Status']
-        )
-
-    with col2:
-        linhas_por_pagina = st.selectbox(
-            "Linhas por página:",
-            options=[10, 25, 50, 100],
-            index=1
-        )
-
-    with col3:
-        # Opções de ordenação baseadas nas colunas disponíveis no DataFrame filtrado
-        colunas_ordenacao = ['Data_Formatada', 'Vendedor', 'Aluno', 'Status']
-        ordenar_por = st.selectbox(
-            "Ordenar por:",
-            options=colunas_ordenacao,
-            index=0
-        )
-
-    # Exibe a tabela
-    if mostrar_colunas:
-        try:
-            df_exibicao = df_filtrado[mostrar_colunas].copy()
-
-            # Ordena os dados - verifica se a coluna existe
-            if ordenar_por in df_exibicao.columns:
-                df_exibicao = df_exibicao.sort_values(
-                    ordenar_por, ascending=False)
-            else:
-                st.warning(
-                    f"Coluna '{ordenar_por}' não encontrada para ordenação.")
-
-            # Paginação
-            total_linhas = len(df_exibicao)
-            total_paginas = max(1, (total_linhas - 1) // linhas_por_pagina + 1)
-
-            if total_paginas > 1:
-                pagina = st.number_input(
-                    f"Página (1 a {total_paginas}):",
-                    min_value=1,
-                    max_value=total_paginas,
-                    value=1
-                )
-
-                inicio = (pagina - 1) * linhas_por_pagina
-                fim = inicio + linhas_por_pagina
-                df_exibicao = df_exibicao.iloc[inicio:fim]
-
-            st.dataframe(df_exibicao, use_container_width=True)
-
-            # Informações da tabela
-            st.info(
-                f"Mostrando {len(df_exibicao)} de {total_linhas} registros")
-
-        except Exception as e:
-            st.error(f"Erro ao exibir tabela: {str(e)}")
-
-    # Botão para download dos dados
-    if st.button("📥 Download dos Dados (CSV)"):
-        try:
-            csv = df_filtrado.to_csv(index=False)
-            st.download_button(
-                label="Baixar CSV",
-                data=csv,
-                file_name=f"dados_vendas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+        with col1:
+            colunas_disponiveis = ['Data_Formatada', 'Vendedor',
+                                   'Aluno', 'Telefone', 'Status', 'Status_Categoria']
+            mostrar_colunas = st.multiselect(
+                "Selecione as colunas:",
+                options=colunas_disponiveis,
+                default=['Data_Formatada', 'Vendedor', 'Aluno', 'Status']
             )
-        except Exception as e:
-            st.error(f"Erro ao gerar CSV: {str(e)}")
+
+        with col2:
+            linhas_por_pagina = st.selectbox(
+                "Linhas por página:",
+                options=[10, 25, 50, 100],
+                index=1
+            )
+
+        with col3:
+            # Opções de ordenação baseadas nas colunas disponíveis no DataFrame filtrado
+            colunas_ordenacao = ['Data_Formatada',
+                                 'Vendedor', 'Aluno', 'Status']
+            ordenar_por = st.selectbox(
+                "Ordenar por:",
+                options=colunas_ordenacao,
+                index=0
+            )
+
+        # Exibe a tabela
+        if mostrar_colunas:
+            try:
+                df_exibicao = df_filtrado[mostrar_colunas].copy()
+
+                # Ordena os dados - verifica se a coluna existe
+                if ordenar_por in df_exibicao.columns:
+                    df_exibicao = df_exibicao.sort_values(
+                        ordenar_por, ascending=False)
+                else:
+                    st.warning(
+                        f"Coluna '{ordenar_por}' não encontrada para ordenação.")
+
+                # Paginação
+                total_linhas = len(df_exibicao)
+                total_paginas = max(1, (total_linhas - 1) //
+                                    linhas_por_pagina + 1)
+
+                if total_paginas > 1:
+                    pagina = st.number_input(
+                        f"Página (1 a {total_paginas}):",
+                        min_value=1,
+                        max_value=total_paginas,
+                        value=1
+                    )
+
+                    inicio = (pagina - 1) * linhas_por_pagina
+                    fim = inicio + linhas_por_pagina
+                    df_exibicao = df_exibicao.iloc[inicio:fim]
+
+                st.dataframe(df_exibicao, use_container_width=True)
+
+                # Informações da tabela
+                st.info(
+                    f"Mostrando {len(df_exibicao)} de {total_linhas} registros")
+
+            except Exception as e:
+                st.error(f"Erro ao exibir tabela: {str(e)}")
+
+        # Botão para download dos dados (dentro do expander)
+        st.markdown("---")
+        if st.button("📥 Download dos Dados (CSV)"):
+            try:
+                csv = df_filtrado.to_csv(index=False)
+                st.download_button(
+                    label="Baixar CSV",
+                    data=csv,
+                    file_name=f"dados_vendas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"Erro ao gerar CSV: {str(e)}")
 
 
 if __name__ == "__main__":
