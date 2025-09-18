@@ -32,13 +32,14 @@ st.markdown("""
     .stMetric > div {
         font-size: 24px !important;
     }
+    .stAlert > div {
+        padding: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Cache para carregar dados
 
-
-@st.cache_data(ttl=300)  # Cache por 5 minutos
+@st.cache_data(ttl=300)
 def carregar_dados():
     """Carrega os dados com cache"""
     try:
@@ -66,6 +67,8 @@ def main():
 
     if df_raw.empty:
         st.error("Não foi possível carregar os dados.")
+        st.info(
+            "Verifique se as planilhas do Google Sheets estão públicas e acessíveis.")
         return
 
     # Processa os dados
@@ -87,8 +90,12 @@ def main():
     st.sidebar.subheader("📅 Período")
 
     # Data mínima e máxima dos dados
-    data_min = pd.to_datetime(df_raw['Data']).min().date()
-    data_max = pd.to_datetime(df_raw['Data']).max().date()
+    try:
+        data_min = pd.to_datetime(df_raw['Data'], errors='coerce').min().date()
+        data_max = pd.to_datetime(df_raw['Data'], errors='coerce').max().date()
+    except:
+        data_min = datetime.now().date() - timedelta(days=90)
+        data_max = datetime.now().date()
 
     col1, col2 = st.sidebar.columns(2)
     with col1:
@@ -111,6 +118,12 @@ def main():
     if st.sidebar.button("🔄 Atualizar Dados"):
         st.cache_data.clear()
         st.rerun()
+
+    # Informações sobre os dados carregados
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("ℹ️ Informações")
+    st.sidebar.info(f"Total de registros: {len(df_raw)}")
+    st.sidebar.info(f"Vendedores: {len(vendedores_disponiveis)}")
 
     # Aplica filtros
     df_filtrado = processor.filtrar_dados(
@@ -224,7 +237,7 @@ def main():
         st.plotly_chart(fig_performance, use_container_width=True)
 
     # Gráfico de leads ao longo do tempo
-    st.subheader("Leads Criados ao Longo do Tempo")
+    st.subheader("�� Leads Criados ao Longo do Tempo")
     fig_tempo = charts.criar_leads_tempo(df_tempo)
     st.plotly_chart(fig_tempo, use_container_width=True)
 
@@ -236,10 +249,11 @@ def main():
     col1, col2, col3 = st.columns(3)
 
     with col1:
+        colunas_disponiveis = ['Data_Formatada', 'Vendedor',
+                               'Aluno', 'Telefone', 'Status', 'Status_Categoria']
         mostrar_colunas = st.multiselect(
             "Selecione as colunas:",
-            options=['Data_Formatada', 'Vendedor', 'Aluno',
-                     'Telefone', 'Status', 'Status_Categoria'],
+            options=colunas_disponiveis,
             default=['Data_Formatada', 'Vendedor', 'Aluno', 'Status']
         )
 
@@ -251,50 +265,64 @@ def main():
         )
 
     with col3:
+        # Opções de ordenação baseadas nas colunas disponíveis no DataFrame filtrado
+        colunas_ordenacao = ['Data_Formatada', 'Vendedor', 'Aluno', 'Status']
         ordenar_por = st.selectbox(
             "Ordenar por:",
-            options=['Data', 'Vendedor', 'Aluno', 'Status'],
+            options=colunas_ordenacao,
             index=0
         )
 
     # Exibe a tabela
     if mostrar_colunas:
-        df_exibicao = df_filtrado[mostrar_colunas].copy()
+        try:
+            df_exibicao = df_filtrado[mostrar_colunas].copy()
 
-        # Ordena os dados
-        if ordenar_por in df_filtrado.columns:
-            df_exibicao = df_exibicao.sort_values(ordenar_por, ascending=False)
+            # Ordena os dados - verifica se a coluna existe
+            if ordenar_por in df_exibicao.columns:
+                df_exibicao = df_exibicao.sort_values(
+                    ordenar_por, ascending=False)
+            else:
+                st.warning(
+                    f"Coluna '{ordenar_por}' não encontrada para ordenação.")
 
-        # Paginação
-        total_linhas = len(df_exibicao)
-        total_paginas = (total_linhas - 1) // linhas_por_pagina + 1
+            # Paginação
+            total_linhas = len(df_exibicao)
+            total_paginas = max(1, (total_linhas - 1) // linhas_por_pagina + 1)
 
-        if total_paginas > 1:
-            pagina = st.number_input(
-                f"Página (1 a {total_paginas}):",
-                min_value=1,
-                max_value=total_paginas,
-                value=1
-            )
+            if total_paginas > 1:
+                pagina = st.number_input(
+                    f"Página (1 a {total_paginas}):",
+                    min_value=1,
+                    max_value=total_paginas,
+                    value=1
+                )
 
-            inicio = (pagina - 1) * linhas_por_pagina
-            fim = inicio + linhas_por_pagina
-            df_exibicao = df_exibicao.iloc[inicio:fim]
+                inicio = (pagina - 1) * linhas_por_pagina
+                fim = inicio + linhas_por_pagina
+                df_exibicao = df_exibicao.iloc[inicio:fim]
 
-        st.dataframe(df_exibicao, use_container_width=True)
+            st.dataframe(df_exibicao, use_container_width=True)
 
-        # Informações da tabela
-        st.info(f"Mostrando {len(df_exibicao)} de {total_linhas} registros")
+            # Informações da tabela
+            st.info(
+                f"Mostrando {len(df_exibicao)} de {total_linhas} registros")
+
+        except Exception as e:
+            st.error(f"Erro ao exibir tabela: {str(e)}")
 
     # Botão para download dos dados
     if st.button("📥 Download dos Dados (CSV)"):
-        csv = df_filtrado.to_csv(index=False)
-        st.download_button(
-            label="Baixar CSV",
-            data=csv,
-            file_name=f"dados_vendas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
+        try:
+            csv = df_filtrado.to_csv(index=False)
+            st.download_button(
+                label="Baixar CSV",
+                data=csv,
+                file_name=f"dados_vendas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv"
+            )
+        except Exception as e:
+            st.error(f"Erro ao gerar CSV: {str(e)}")
 
 
 if __name__ == "__main__":
