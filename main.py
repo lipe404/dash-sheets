@@ -47,12 +47,12 @@ def carregar_dados(aba_selecionada="Setembro"):
         df = loader.carregar_todos_dados(aba_selecionada)
         if df.empty:
             st.warning(
-                "Não foi possível carregar dados do Google Sheets. Usando dados de demonstração.")
+                "⚠️ Não foi possível carregar dados do Google Sheets. Usando dados de demonstração.")
             df = carregar_dados_demo()
         return df
     except Exception as e:
-        st.error(f"Erro ao carregar dados: {str(e)}")
-        st.info("Carregando dados de demonstração...")
+        st.error(f"❌ Erro ao carregar dados: {str(e)}")
+        st.info("🔄 Carregando dados de demonstração...")
         return carregar_dados_demo()
 
 
@@ -63,6 +63,13 @@ def main():
 
     # Sidebar - Filtros
     st.sidebar.header("🔍 Filtros")
+
+    # Modo debug (opcional)
+    debug_mode = st.sidebar.checkbox("🐛 Modo Debug", value=False)
+    if 'debug_mode' not in st.session_state:
+        st.session_state.debug_mode = debug_mode
+    else:
+        st.session_state.debug_mode = debug_mode
 
     # Filtro de Aba
     loader = GoogleSheetsLoader()
@@ -75,14 +82,35 @@ def main():
     )
 
     # Carrega os dados baseado na aba selecionada
-    with st.spinner(f"Carregando dados da aba '{aba_selecionada}'..."):
+    with st.spinner(f"🔄 Carregando dados da aba '{aba_selecionada}'..."):
         df_raw = carregar_dados(aba_selecionada)
 
     if df_raw.empty:
-        st.error("Não foi possível carregar os dados.")
+        st.error("❌ Não foi possível carregar os dados.")
         st.info(
-            "Verifique se as planilhas do Google Sheets estão públicas e acessíveis.")
+            "💡 Verifique se as planilhas do Google Sheets estão públicas e acessíveis.")
         return
+
+    # Debug: mostra informações dos dados carregados
+    if debug_mode:
+        st.subheader("🐛 Informações de Debug")
+        with st.expander("Ver dados brutos carregados", expanded=False):
+            st.write("Shape dos dados:", df_raw.shape)
+            st.write("Colunas:", list(df_raw.columns))
+            st.write("Primeiras 5 linhas:")
+            st.dataframe(df_raw.head())
+
+            # Corrige o erro de comparação de tipos
+            try:
+                status_unicos = df_raw['Status'].dropna().astype(str).unique()
+                status_unicos_ordenados = sorted(
+                    [s for s in status_unicos if s != 'nan'])
+                st.write("Status únicos encontrados:")
+                st.write(status_unicos_ordenados)
+            except Exception as e:
+                st.write(f"Erro ao processar status únicos: {e}")
+                st.write("Status únicos (sem ordenação):")
+                st.write(list(df_raw['Status'].dropna().unique()))
 
     # Processa os dados
     processor = DataProcessor(df_raw)
@@ -132,9 +160,9 @@ def main():
     # Informações sobre os dados carregados
     st.sidebar.markdown("---")
     st.sidebar.subheader("ℹ️ Informações")
-    st.sidebar.info(f"Aba: {aba_selecionada}")
-    st.sidebar.info(f"Total de registros: {len(df_raw)}")
-    st.sidebar.info(f"Vendedores: {len(vendedores_disponiveis)}")
+    st.sidebar.info(f"📋 Aba: {aba_selecionada}")
+    st.sidebar.info(f"📊 Total de registros: {len(df_raw)}")
+    st.sidebar.info(f"👥 Vendedores: {len(vendedores_disponiveis)}")
 
     # Expander com informações sobre status
     with st.sidebar.expander("📋 Status Organizados", expanded=False):
@@ -149,7 +177,7 @@ def main():
         vendedores_selecionados, data_inicio, data_fim)
 
     if df_filtrado.empty:
-        st.warning("Nenhum dado encontrado com os filtros aplicados.")
+        st.warning("⚠️ Nenhum dado encontrado com os filtros aplicados.")
         return
 
     # Calcula KPIs
@@ -258,7 +286,7 @@ def main():
         st.plotly_chart(fig_performance, use_container_width=True)
 
     # Gráfico de leads ao longo do tempo
-    st.subheader("�� Leads Criados ao Longo do Tempo")
+    st.subheader("Leads Criados ao Longo do Tempo")
     fig_tempo = charts.criar_leads_tempo(df_tempo)
     st.plotly_chart(fig_tempo, use_container_width=True)
 
@@ -288,7 +316,6 @@ def main():
             )
 
         with col3:
-            # Opções de ordenação baseadas nas colunas disponíveis no DataFrame filtrado
             colunas_ordenacao = ['Data_Formatada',
                                  'Vendedor', 'Aluno', 'Status']
             ordenar_por = st.selectbox(
@@ -302,13 +329,9 @@ def main():
             try:
                 df_exibicao = df_filtrado[mostrar_colunas].copy()
 
-                # Ordena os dados - verifica se a coluna existe
                 if ordenar_por in df_exibicao.columns:
                     df_exibicao = df_exibicao.sort_values(
                         ordenar_por, ascending=False)
-                else:
-                    st.warning(
-                        f"Coluna '{ordenar_por}' não encontrada para ordenação.")
 
                 # Paginação
                 total_linhas = len(df_exibicao)
@@ -328,15 +351,13 @@ def main():
                     df_exibicao = df_exibicao.iloc[inicio:fim]
 
                 st.dataframe(df_exibicao, use_container_width=True)
-
-                # Informações da tabela
                 st.info(
-                    f"Mostrando {len(df_exibicao)} de {total_linhas} registros")
+                    f"📊 Mostrando {len(df_exibicao)} de {total_linhas} registros")
 
             except Exception as e:
-                st.error(f"Erro ao exibir tabela: {str(e)}")
+                st.error(f"❌ Erro ao exibir tabela: {str(e)}")
 
-        # Botão para download dos dados (dentro do expander)
+        # Botão para download dos dados
         st.markdown("---")
         if st.button("📥 Download dos Dados (CSV)"):
             try:
@@ -348,7 +369,7 @@ def main():
                     mime="text/csv"
                 )
             except Exception as e:
-                st.error(f"Erro ao gerar CSV: {str(e)}")
+                st.error(f"❌ Erro ao gerar CSV: {str(e)}")
 
 
 if __name__ == "__main__":

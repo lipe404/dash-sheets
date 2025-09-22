@@ -13,8 +13,15 @@ class DataProcessor:
         if self.df.empty:
             return
 
-        # Converte a coluna de data
-        self.df['Data'] = pd.to_datetime(self.df['Data'], errors='coerce')
+        # Garante que a coluna Data está no formato datetime
+        if 'Data' in self.df.columns:
+            # Se já foi processada pelo loader inteligente, mantém
+            if self.df['Data'].dtype == 'datetime64[ns]':
+                pass  # Já está processada
+            else:
+                # Converte se ainda não foi processada
+                self.df['Data'] = pd.to_datetime(
+                    self.df['Data'], errors='coerce')
 
         # Remove registros sem data válida
         self.df = self.df.dropna(subset=['Data'])
