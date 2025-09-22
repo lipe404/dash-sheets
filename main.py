@@ -7,7 +7,7 @@ import plotly.express as px
 from data_loader import GoogleSheetsLoader, carregar_dados_demo
 from data_processor import DataProcessor
 from visualizations import DashboardCharts
-from utils import formatar_numero, formatar_percentual
+from utils import formatar_numero, formatar_percentual, obter_status_disponiveis
 
 # Configuração da página
 st.set_page_config(
@@ -135,6 +135,14 @@ def main():
     st.sidebar.info(f"Aba: {aba_selecionada}")
     st.sidebar.info(f"Total de registros: {len(df_raw)}")
     st.sidebar.info(f"Vendedores: {len(vendedores_disponiveis)}")
+
+    # Expander com informações sobre status
+    with st.sidebar.expander("📋 Status Organizados", expanded=False):
+        status_info = obter_status_disponiveis()
+        for categoria, status_lista in status_info.items():
+            st.markdown(f"**{categoria}:**")
+            for status in status_lista:
+                st.markdown(f"• {status}")
 
     # Aplica filtros
     df_filtrado = processor.filtrar_dados(

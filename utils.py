@@ -8,35 +8,46 @@ def categorizar_status(status):
     if pd.isna(status):
         return "Perdido"
 
-    status = str(status).upper().strip()
+    status = str(status).strip()
 
     # Status de leads fechados/convertidos
     status_fechados = ["PAGO"]
 
     # Status de leads em progresso
     status_progresso = [
-        "EM NEGOCIAÇÃO", "AGUARDANDO INTERAÇÃO", "AGUARDANDO FICHA",
-        "AGUARDANDO INTRA", "AGUARDANDO MENSAGEM",
-        "AGUARDANDO O PREENCHIMENTO DA FICHA", "AGUARDANDO RETORNO",
-        "AGUARDANDO PAGAMENTO"
+        "EM NEGOCIAÇÃO",
+        "Aguardando retorno",
+        "Aguardando pagamento",
+        "AGUARDANDO INTERAÇÃO",
+        "AGUARDANDO MENSAGEM",
+        "AGUARDANDO INTRA",
+        "EM PROCESSO"
     ]
 
     # Status de leads perdidos
     status_perdidos = [
-        "NÃO RESPONDE", "SEM ENSINO MÉDIO", "NÃO POSSUÍ INTERESSE",
-        "NÃO CONTÉ O CURSO QUE DESEJA", "NÃO TEM O CURSO",
-        "ME BLOQUEOU", "OUTRO TIPO DE CURSO", "NÃO CONTÉM EXPERIENCIA",
-        "NÃO POSSUI O CURSO QUE DESEJA", "GRADUAÇÃO"
+        "NÃO POSSUÍ INTERESSE",
+        "NÃO RESPONDE",
+        "NÃO TEM O CURSO DE INTERESSE",
+        "Não contém experiencia.",
+        "Não tem o curso",
+        "OUTRO TIPO DE CURSO",
+        "NÃO POSSUI O TEMPO MINÍMO",
+        "Não contém o curso desejado.",
+        "não possui experiencia.",
+        "PERDIDO"
     ]
 
-    if any(s in status for s in status_fechados):
+    # Verifica correspondência exata primeiro
+    if status in status_fechados:
         return "Fechado"
-    elif any(s in status for s in status_progresso):
+    elif status in status_progresso:
         return "Em Progresso"
-    elif any(s in status for s in status_perdidos):
+    elif status in status_perdidos:
         return "Perdido"
     else:
-        return "Em Progresso"  # Default para status não categorizados
+        # Para status não categorizados, coloca como "Em Progresso" por padrão
+        return "Em Progresso"
 
 
 def formatar_numero(numero):
@@ -63,3 +74,31 @@ def validar_nome(nome):
         return False
     nome_str = str(nome).strip()
     return len(nome_str) > 0 and nome_str != "nan"
+
+
+def obter_status_disponiveis():
+    """Retorna lista de todos os status disponíveis organizados por categoria"""
+    return {
+        "Fechado": ["PAGO"],
+        "Em Progresso": [
+            "EM NEGOCIAÇÃO",
+            "Aguardando retorno",
+            "Aguardando pagamento",
+            "AGUARDANDO INTERAÇÃO",
+            "AGUARDANDO MENSAGEM",
+            "AGUARDANDO INTRA",
+            "EM PROCESSO"
+        ],
+        "Perdido": [
+            "NÃO POSSUÍ INTERESSE",
+            "NÃO RESPONDE",
+            "NÃO TEM O CURSO DE INTERESSE",
+            "Não contém experiencia.",
+            "Não tem o curso",
+            "OUTRO TIPO DE CURSO",
+            "NÃO POSSUI O TEMPO MINÍMO",
+            "Não contém o curso desejado.",
+            "não possui experiencia.",
+            "PERDIDO"
+        ]
+    }

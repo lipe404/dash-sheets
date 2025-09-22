@@ -84,9 +84,6 @@ class GoogleSheetsLoader:
                     f"Não foi possível acessar os dados de {vendedor} na aba '{aba_selecionada}'. Verifique se a planilha e aba estão públicas.")
                 return pd.DataFrame()
 
-            # Debug info (opcional - remova em produção)
-            # st.info(f"Dados carregados de {vendedor} - Aba: {aba_selecionada} - URL: {url_sucesso}")
-
             # Limpa o DataFrame
             df = df.dropna(how='all')  # Remove linhas completamente vazias
             # Remove colunas completamente vazias
@@ -126,7 +123,7 @@ class GoogleSheetsLoader:
 
             # Se não conseguiu mapear a coluna Status, cria uma padrão
             if 'Status' not in df_limpo.columns:
-                df_limpo['Status'] = 'SEM STATUS'
+                df_limpo['Status'] = 'EM PROCESSO'
 
             # Remove linhas sem dados essenciais
             df_limpo = df_limpo.dropna(subset=['Data', 'Aluno'])
@@ -173,8 +170,6 @@ class GoogleSheetsLoader:
 
         if dados_completos:
             df_final = pd.concat(dados_completos, ignore_index=True)
-            """st.success(
-                f"✅ Dados carregados de {vendedores_carregados} vendedor(es) da aba '{aba_selecionada}'!")"""
             return df_final
         else:
             st.error(
@@ -187,17 +182,33 @@ class GoogleSheetsLoader:
 
 
 def carregar_dados_demo():
-    """Carrega dados de demonstração para teste"""
+    """Carrega dados de demonstração para teste com os novos status organizados"""
     import random
     from datetime import datetime, timedelta
 
     vendedores = ["Tayssa", "Maria Eduarda",
                   "Marya", "Danúbia", "Debóra", "Felipe"]
+
+    # Status organizados conforme as planilhas atualizadas
     status_list = [
-        "EM NEGOCIAÇÃO", "AGUARDANDO INTERAÇÃO", "NÃO RESPONDE",
-        "AGUARDANDO FICHA", "SEM ENSINO MÉDIO", "GRADUAÇÃO", "PAGO",
-        "NÃO POSSUÍ INTERESSE", "AGUARDANDO INTRA", "ME BLOQUEOU",
-        "OUTRO TIPO DE CURSO", "AGUARDANDO RETORNO", "AGUARDANDO PAGAMENTO"
+        "NÃO POSSUÍ INTERESSE",
+        "NÃO RESPONDE",
+        "EM NEGOCIAÇÃO",
+        "PAGO",
+        "NÃO TEM O CURSO DE INTERESSE",
+        "Não contém experiencia.",
+        "Aguardando retorno",
+        "Não tem o curso",
+        "AGUARDANDO INTERAÇÃO",
+        "OUTRO TIPO DE CURSO",
+        "NÃO POSSUI O TEMPO MINÍMO",
+        "Não contém o curso desejado.",
+        "não possui experiencia.",
+        "Aguardando pagamento",
+        "AGUARDANDO MENSAGEM",
+        "AGUARDANDO INTRA",
+        "EM PROCESSO",
+        "PERDIDO"
     ]
 
     dados = []
@@ -219,7 +230,7 @@ def carregar_dados_demo():
             'Telefone': telefone,
             'Status': random.choice(status_list),
             'Vendedor': random.choice(vendedores),
-            'Aba': 'Setembro'  # Adiciona coluna Aba para dados demo
+            'Aba': 'Setembro'
         })
 
     return pd.DataFrame(dados)
